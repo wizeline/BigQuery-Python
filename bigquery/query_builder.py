@@ -1,7 +1,46 @@
+import re
+
 from logging import getLogger, NullHandler
+
+UNESCAPED_QUOTE = r"([^\\])'"
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
+
+
+class ParameterizedQuery:
+    """Parametrized SQL query wrapper to insert parameters in a secure way"""
+    def __init__(self, statement):
+        self._statement = statement
+
+    def bind(self, **kwargs):
+        """
+        Parameters
+        ----------
+        **kwargs : dict
+            Secuence of named parameters of the SQL query
+
+        Returns
+        -------
+        str
+            The SQL query including its parameters properly interpolated
+        """
+        escaped_args = self._escape_single_quotes(kwargs)
+        return self._statement.format(**escaped_args)
+
+    def _escape_single_quotes(self, arguments):
+        return {
+            arg_name: self._escape_string_value(arg_value)
+            for arg_name, arg_value in arguments.items()
+        }
+
+    def _escape_string_value(self, value):
+        try:
+            return re.sub(UNESCAPED_QUOTE, _replace_quote_with, value)
+        except TypeError:
+            # `value` is not str nor byte-like object, in this case, the method
+            # is a no-op
+            return value
 
 
 def render_query(dataset, tables, select=None, conditions=None,
@@ -397,3 +436,29 @@ def _render_limit(limit):
         return ''
 
     return "LIMIT %s" % limit
+
+
+def _replace_quote_with(match):
+    """This replace function introduces a backslash right before any single quote
+    character.
+
+    The `match` object is passed from a `re.sub()` call matching a non escaped
+    quote with the constant regular expression defined at `UNESCAPED_QUOTE`
+    value.
+
+    It contains only one matching group: the non escaped single quote and the
+    previous character in the original string.
+
+    >>> string = "I'm a string"
+    >>> pattern = r"([^\\])'"
+    >>> match = re.search(pattern, string)
+    >>> match.groups()
+    ('I',)
+
+    >>> string = r"I\'m a string"
+    >>> pattern = r"([^\\])'"
+    >>> match = re.search(pattern, string)
+    >>> match is None
+    True
+    """
+    return match.group(0)[0] + r"\'"

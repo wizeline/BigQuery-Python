@@ -1003,3 +1003,86 @@ class TestRenderQuery(unittest.TestCase):
         result_from = result[len('SELECT '):].split('FROM')[1]
         six.assertCountEqual(self, expected_select, result_select)
         six.assertCountEqual(self, expected_from, result_from)
+
+
+class TestParameterizedQuery(unittest.TestCase):
+    def setUp(self):
+        self.input = "SELECT x FROM {data_set} WHERE value = '{value}'"
+        self.non_string_input = "SELECT x FROM {data_set} WHERE value = {value}"
+
+    def test_bind_arguments_with_single_quotes(self):
+        from bigquery.query_builder import ParameterizedQuery
+
+        query = ParameterizedQuery(self.input)
+
+        query_statement = query.bind(data_set='table',
+                                     value="escape please: ' <- there")
+
+        self.assertEqual(
+            query_statement,
+            "SELECT x FROM table WHERE value = 'escape please: \\' <- there'"
+        )
+
+    def test_bind_arguments_escaped_with_single_quotes(self):
+        from bigquery.query_builder import ParameterizedQuery
+
+        query = ParameterizedQuery(self.input)
+
+        query_statement = query.bind(data_set='table',
+                                     value="do not escape please: \\' <- there")
+
+        self.assertEqual(
+            query_statement,
+            "SELECT x FROM table WHERE value = 'do not escape please: \\' <- there'"
+        )
+
+    def test_bind_non_quoted_arguments(self):
+        from bigquery.query_builder import ParameterizedQuery
+
+        query = ParameterizedQuery(self.input)
+
+        query_statement = query.bind(data_set='table',
+                                     value="I have no quotes")
+
+        self.assertEqual(
+            query_statement,
+            "SELECT x FROM table WHERE value = 'I have no quotes'"
+        )
+
+    def test_bind_non_string_arguments(self):
+        from bigquery.query_builder import ParameterizedQuery
+
+        query = ParameterizedQuery(self.non_string_input)
+
+        query_statement = query.bind(data_set='table',
+                                     value=10)
+
+        self.assertEqual(
+            query_statement,
+            "SELECT x FROM table WHERE value = 10"
+        )
+
+        query_statement = query.bind(data_set='table',
+                                     value=None)
+
+        self.assertEqual(
+            query_statement,
+            "SELECT x FROM table WHERE value = None"
+        )
+
+        obj = object()
+        query_statement = query.bind(data_set='table',
+                                     value=obj)
+
+        self.assertEqual(
+            query_statement,
+            f"SELECT x FROM table WHERE value = {str(obj)}"
+        )
+
+        query_statement = query.bind(data_set='table',
+                                     value=True)
+
+        self.assertEqual(
+            query_statement,
+            "SELECT x FROM table WHERE value = True"
+        )
