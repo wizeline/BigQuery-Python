@@ -261,6 +261,7 @@ class BigQueryClient(object):
                 projectId=self.project_id, body=query_data).execute(
                 num_retries=self.num_retries)
         except HttpError as e:
+            logger.error('client.py::_submit_query_job HttpError QUERY_DATA: {}'.format(query_data))
             if query_data.get("dryRun", False):
                 return None, json.loads(e.content.decode('utf8'))
             raise
@@ -273,7 +274,10 @@ class BigQueryClient(object):
         # raise exceptions if it's not an async query
         # and job is not completed after timeout
         if not job_complete and query_data.get("timeoutMs", False):
-            logger.error('BigQuery job %s timeout' % job_id)
+            logger.error('BigQuery job {} timeout'.format(job_id))
+            logger.error('client.py::_submit_query_job BigQueryTimeoutException')
+            logger.error('client.py::_submit_query_job BigQueryTimeoutException QUERY_DATA: {}'.format(query_data))
+            logger.error('client.py::_submit_query_job BigQueryTimeoutException QUERY_REPLY: {}'.format(query_reply))
             raise BigQueryTimeoutException()
 
         return job_id, [self._transform_row(row, schema) for row in rows]
