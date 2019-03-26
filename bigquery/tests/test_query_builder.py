@@ -1096,9 +1096,6 @@ class TestParameterizedQuery(unittest.TestCase):
         query_statement = query.bind(data_set='table',
                                      value="'a', 'b'")
 
-        print('\n\nquery_statement\n\n')
-        print(query_statement)
-
         self.assertEqual(
             query_statement,
             "SELECT x FROM table WHERE value IN (\\'a\\', \\'b\\')"
