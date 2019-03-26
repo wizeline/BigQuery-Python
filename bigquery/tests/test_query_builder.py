@@ -1009,6 +1009,7 @@ class TestParameterizedQuery(unittest.TestCase):
     def setUp(self):
         self.input = "SELECT x FROM {data_set} WHERE value = '{value}'"
         self.non_string_input = "SELECT x FROM {data_set} WHERE value = {value}"
+        self.in_statement_input = "SELECT x FROM {data_set} WHERE value IN ({value})"
 
     def test_bind_arguments_with_single_quotes(self):
         from bigquery.query_builder import ParameterizedQuery
@@ -1085,4 +1086,20 @@ class TestParameterizedQuery(unittest.TestCase):
         self.assertEqual(
             query_statement,
             "SELECT x FROM table WHERE value = True"
+        )
+
+    def test_bind_string_arguments_strating_with_single_quote(self):
+        from bigquery.query_builder import ParameterizedQuery
+
+        query = ParameterizedQuery(self.in_statement_input)
+
+        query_statement = query.bind(data_set='table',
+                                     value="'a', 'b'")
+
+        print('\n\nquery_statement\n\n')
+        print(query_statement)
+
+        self.assertEqual(
+            query_statement,
+            "SELECT x FROM table WHERE value IN (\\'a\\', \\'b\\')"
         )

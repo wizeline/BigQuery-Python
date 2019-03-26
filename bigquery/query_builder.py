@@ -2,7 +2,7 @@ import re
 
 from logging import getLogger, NullHandler
 
-UNESCAPED_QUOTE = r"([^\\])'"
+UNESCAPED_QUOTE = r"([^\\])'|(^)'"
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
@@ -461,4 +461,7 @@ def _replace_quote_with(match):
     >>> match is None
     True
     """
+
+    if match.group(0)[0] == '\'':
+        return "\\'"
     return match.group(0)[0] + r"\'"
